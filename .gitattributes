@@ -1,0 +1,7 @@
+* text=auto
+
+# 这两个要在 Linux / Android 的 sh、node 里直接跑：Windows 上 clone 也必须保持 LF。
+*.sh text eol=lf
+*.mjs text eol=lf
+*.js text eol=lf
+*.yml text eol=lf

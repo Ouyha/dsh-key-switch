@@ -1,6 +1,6 @@
 {
   "name": "dsh-key-switch",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "description": "为同一个模型提供商保存多个 API Key，一键切换当前使用中的账号",
   "repository": {
@@ -44,6 +44,7 @@
     "deepseek",
     "dsh",
     "dsh-plugin",
+    "dsh-go",
     "api-key",
     "switch"
   ]

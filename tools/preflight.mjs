@@ -10,9 +10,11 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+import { resolveTarget } from './target.mjs'
+
 const APP = process.env.DSH_APP_DIR ?? 'D:/app/ds/resources/app/dsh'
-const home = process.env.DSH_HOME ?? join(homedir(), '.dsh')
-const profileDir = join(home, 'profiles', 'desktop')
+// 和安装器同一套判定：装到哪个 profile，就检查哪个。
+const { profileDir } = resolveTarget({ argv: process.argv.slice(2), home: homedir() })
 
 const boot = await import(pathToFileURL(join(APP, 'node_modules/@deepseek-ai/dsh-app-boot/lib/index.js')).href)
 const profile = boot.loadProfileDirectory('dsh', profileDir, APP)
