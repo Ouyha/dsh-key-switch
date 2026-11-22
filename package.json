@@ -1,0 +1,50 @@
+{
+  "name": "dsh-key-switch",
+  "version": "0.2.0",
+  "private": true,
+  "description": "为同一个模型提供商保存多个 API Key，一键切换当前使用中的账号",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ouyha/dsh-key-switch.git"
+  },
+  "homepage": "https://github.com/Ouyha/dsh-key-switch#readme",
+  "bugs": {
+    "url": "https://github.com/Ouyha/dsh-key-switch/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-credentials": ">=0.2.2-rc.1 <0.3.0-0",
+    "@deepseek-ai/dsh-host-webserver": ">=0.2.2-rc.1 <0.3.0-0"
+  },
+  "dependencies": {},
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-layout"
+      ],
+      "platform": "web"
+    }
+  },
+  "keywords": [
+    "deepseek",
+    "dsh",
+    "dsh-plugin",
+    "api-key",
+    "switch"
+  ]
+}

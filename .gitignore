@@ -1,0 +1,7 @@
+node_modules/
+*.log
+*.bak-*
+*.corrupt-*
+.DS_Store
+Thumbs.db
+coverage/
