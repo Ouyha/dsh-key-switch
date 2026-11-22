@@ -1,6 +1,6 @@
 {
   "name": "dsh-key-switch",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "为同一个模型提供商保存多个 API Key，一键切换当前使用中的账号",
   "repository": {
@@ -19,12 +19,7 @@
     "./package.json": "./package.json"
   },
   "engines": {
-    "node": "^22.19.0 || >=24.0.0",
-    "dsh": ">=0.2.2-rc.1 <0.3.0-0"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/dsh-credentials": ">=0.2.2-rc.1 <0.3.0-0",
-    "@deepseek-ai/dsh-host-webserver": ">=0.2.2-rc.1 <0.3.0-0"
+    "node": "^22.19.0 || >=24.0.0"
   },
   "dependencies": {},
   "scripts": {

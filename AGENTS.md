@@ -42,6 +42,7 @@ node install.mjs --print-target
 2. 报「找不到 …/profiles/xxx/package.json」→ 让用户先把那一边启动一次（生成 profile），或用 `--profile <名字或目录>` 指过去。
 3. 报 Node 版本 → 需要 Node 22.19+ 或 24+。DSH 自己跑在 Node 上，找它的 Node。
 4. 报 clone / 下载失败 → 网络问题。国内环境先设代理，或 `DSH_KEY_SWITCH_SRC=<本地已 clone 的目录>` 跳过联网。
+5. **装完重启了，但插件就是不出现**（尤其手机版）→ 先看「设置 › 插件」里这一条是否标了不兼容／已跳过。宿主会按 `engines.dsh` 判断兼容性，不满足就把整个插件从 profile 里剔掉，且不显眼报错。0.4.0 及更早写成 `<0.3.0-0`，在更新引擎上必踩；让用户升级到 0.4.1+，或临时 `dsh plugin allow-version` 放行。**不要**去改 `lib/` 里的代码排查这个问题。
 
 把错误原文贴给用户，别自己加一堆重试和调试脚本。
 
