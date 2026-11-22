@@ -8,7 +8,7 @@ import { after, afterEach, beforeEach, test } from 'node:test'
 const home = await mkdtemp(join(tmpdir(), 'dsh-key-switch-routes-'))
 process.env.DSH_HOME = home
 
-const { apply } = await import('../lib/index.js')
+const { apply } = await import('../../lib/index.js')
 
 /** 内存版凭据服务。 */
 function fakeCredentials(seed = {}) {

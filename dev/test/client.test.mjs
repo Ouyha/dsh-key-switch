@@ -12,7 +12,7 @@ import vm from 'node:vm'
 
 const home = await mkdtemp(join(tmpdir(), 'dsh-key-switch-client-'))
 process.env.DSH_HOME = home
-const { apply } = await import('../lib/index.js')
+const { apply } = await import('../../lib/index.js')
 
 /** 只会这几件事的 React：状态、副作用、回调缓存、引用。 */
 function miniReact() {
@@ -173,7 +173,7 @@ after(async () => {
 
 /** 载入 bundle，返回导出与渲染器工厂。 */
 async function loadBundle(origin = app.origin) {
-  const code = await readFile(new URL('../lib/client.js', import.meta.url), 'utf8')
+  const code = await readFile(new URL('../../lib/client.js', import.meta.url), 'utf8')
   let captured = null
   const sandbox = {
     window: { __ModuleLoader__: { load: module => { captured = module } } },
@@ -307,7 +307,13 @@ test('点「+ 添加提供商」列出候选，选一个加进来才出现卡片
   const picker = textOf(tree)
   assert.match(picker, /从「模型」里选一个用 API Key 认证的提供商/)
   assert.match(picker, /书生/)
-  assert.match(picker, /SHUSHENG_API_KEY/)
+  // 行内显示 API 地址（同名提供商靠它区分），引用名放在 title 里，悬停可见。
+  assert.match(picker, /discovery-api\.intern-ai\.org\.cn/)
+  const rowTitle = findAll(
+    tree,
+    node => node.type === 'div' && typeof node.props?.title === 'string' && node.props.title.includes('SHUSHENG_API_KEY'),
+  )
+  assert.equal(rowTitle.length, 1, '候选行的 title 里要带引用名，便于确认换的是哪一把')
 
   buttons(tree, '添加')[0].props.onClick()
   await settle()

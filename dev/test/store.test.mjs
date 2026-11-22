@@ -7,7 +7,7 @@ import { beforeEach, test } from 'node:test'
 const home = await mkdtemp(join(tmpdir(), 'dsh-key-switch-test-'))
 process.env.DSH_HOME = home
 
-const store = await import('../lib/store.js')
+const store = await import('../../lib/store.js')
 
 beforeEach(async () => { await rm(join(home, 'key-switch'), { recursive: true, force: true }) })
 

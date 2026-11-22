@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-const { discoverProviders, hostOf, providerOf } = await import('../lib/providers.js')
+const { discoverProviders, hostOf, providerOf } = await import('../../lib/providers.js')
 
 /** 造一个和宿主 `ctx.settings.describe()` 同形的描述表。 */
 function settingsWith(value) {

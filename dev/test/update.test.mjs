@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { REPOSITORY, VERSION, parseRepository, rawPackageUrl, repositoryUrl } from '../lib/meta.js'
-import { checkForUpdate } from '../lib/update.js'
-import { compareVersions, parseVersion } from '../lib/version.js'
+import { REPOSITORY, VERSION, parseRepository, rawPackageUrl, repositoryUrl } from '../../lib/meta.js'
+import { checkForUpdate } from '../../lib/update.js'
+import { compareVersions, parseVersion } from '../../lib/version.js'
 
 const repo = { owner: 'Ouyha', name: 'dsh-key-switch' }
 

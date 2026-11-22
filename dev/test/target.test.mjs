@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path'
 
 const {
   PACKAGE, detectDshGo, dshHomeOf, entryHint, hostLabel, profileOf, resolveTarget, stageOf,
-} = await import('../tools/target.mjs')
+} = await import('../../tools/target.mjs')
 
 /** 用一份路径集合冒充文件系统。 */
 function fsOf(...paths) {

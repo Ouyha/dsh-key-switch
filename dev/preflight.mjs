@@ -10,7 +10,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
-import { resolveTarget } from './target.mjs'
+import { resolveTarget } from '../tools/target.mjs'
 
 const APP = process.env.DSH_APP_DIR ?? 'D:/app/ds/resources/app/dsh'
 // 和安装器同一套判定：装到哪个 profile，就检查哪个。
