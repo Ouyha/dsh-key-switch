@@ -418,3 +418,26 @@ test('配置里没有用 API Key 的提供商时，候选面板说清楚去哪�
     await host.close()
   }
 })
+
+test('Host 连不上 GitHub 时，页面用浏览器网络再查一次（走系统代理）', async () => {
+  const original = globalThis.fetch
+  globalThis.fetch = async (url, init) => {
+    const text = String(url)
+    if (text.startsWith('https://raw.githubusercontent.com/')) {
+      return { ok: true, status: 200, async json() { return { version: '9.9.9' } } }
+    }
+    if (text.startsWith('http://127.0.0.1:')) return original(url, init)
+    throw new Error('offline')
+  }
+  try {
+    const { exports, react } = await loadBundle()
+    const render = mountPage(exports, react)
+    let tree = await paint(render)
+    buttons(tree, '检查更新')[0].props.onClick()
+    await settle(400)
+    tree = await render()
+    assert.match(textOf(tree), /有新版本 v9\.9\.9/)
+  } finally {
+    globalThis.fetch = original
+  }
+})

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { REPOSITORY, VERSION, parseRepository, repositoryUrl } from '../lib/meta.js'
+import { REPOSITORY, VERSION, parseRepository, rawPackageUrl, repositoryUrl } from '../lib/meta.js'
 import { checkForUpdate } from '../lib/update.js'
 import { compareVersions, parseVersion } from '../lib/version.js'
 
@@ -44,6 +44,8 @@ test('仓库解析：HTTPS、SSH 与对象写法都能认出 GitHub 坐标', () 
   assert.equal(parseRepository('https://gitlab.com/Ouyha/dsh-key-switch'), null)
   assert.equal(parseRepository(undefined), null)
   assert.equal(repositoryUrl(null), null)
+  assert.equal(rawPackageUrl(repo), 'https://raw.githubusercontent.com/Ouyha/dsh-key-switch/HEAD/package.json')
+  assert.equal(rawPackageUrl(null), null)
 })
 
 test('package.json 里的版本与仓库能被读出来', () => {

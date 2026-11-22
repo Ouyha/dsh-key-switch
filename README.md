@@ -52,7 +52,8 @@ node uninstall.mjs
   - 相同 → 「已是最新版本」；
   - 本地更高 → 说明是本地开发版。
 - **不自动检查**：避免每次打开页面都打 GitHub，也避免没有网络时拖慢首屏。
-- 请求走 Harness 进程的 `fetch`。如果 Harness 是用 `HTTPS_PROXY` / `HTTP_PROXY` 启动的，`dsh-http-proxy` 会装上全局 dispatcher，检测会自动走代理；否则连不上时会明确提示去配代理。
+- 请求先走 Harness 进程的 `fetch`；如果 Harness 是用 `HTTPS_PROXY` / `HTTP_PROXY` 启动的，`dsh-http-proxy` 会装上全局 dispatcher，自动走代理。
+- 如果 Host 的 Node 网络连不上 GitHub（常见于只开了 Windows 系统代理的情况），页面会用浏览器网络栈再查一次——Chromium 会走系统代理。两边都失败时才报错，并提示去配代理。
 
 更新插件：
 
