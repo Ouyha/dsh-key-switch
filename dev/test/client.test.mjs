@@ -171,12 +171,12 @@ after(async () => {
   await rm(home, { recursive: true, force: true })
 })
 
-/** 载入 bundle，返回导出与渲染器工厂。 */
-async function loadBundle(origin = app.origin) {
+/** 载入 bundle，返回导出与渲染器工厂。`windowExtra` 用来伪造宿主窗口（手机宽度、屏幕尺寸）。 */
+async function loadBundle(origin = app.origin, windowExtra = {}) {
   const code = await readFile(new URL('../../lib/client.js', import.meta.url), 'utf8')
   let captured = null
   const sandbox = {
-    window: { __ModuleLoader__: { load: module => { captured = module } } },
+    window: { ...windowExtra, __ModuleLoader__: { load: module => { captured = module } } },
     document: { baseURI: `${origin}/` },
     fetch: (...args) => fetch(...args),
     console,
@@ -206,7 +206,26 @@ async function bootWith(providers) {
     async set(ref, value) { map.set(ref, value) },
     async unset(ref) { map.delete(ref) },
   }
-  const settings = { describe: () => [{ ns: 'llm-pi-ai', value: { providers } }] }
+  // 配置服务：`mutate` 真的改写 providers，会话路由的开关才有地方落。
+  let revision = 1
+  const settings = {
+    describe: () => [{ ns: 'llm-pi-ai', value: { providers }, revision }],
+    async mutate(ns, ops) {
+      for (const op of ops) {
+        // ['providers', id] 改整条路由；['providers', id, 字段] 只改一个字段（基路由改名走这条）。
+        const [, id, field] = op.path
+        if (field === undefined) {
+          if (op.op === 'set') providers[id] = op.value
+          else delete providers[id]
+        } else if (op.op === 'set') {
+          providers[id][field] = op.value
+        } else {
+          delete providers[id][field]
+        }
+      }
+      revision += 1
+    },
+  }
   const dispose = apply({
     webServer: { register(route) { table.set(route.path, route); return () => table.delete(route.path) } },
     get: name => name === 'credentials' ? credentials : name === 'settings' ? settings : undefined,
@@ -219,6 +238,7 @@ async function bootWith(providers) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
   return {
     origin: `http://127.0.0.1:${server.address().port}`,
+    providers,
     close: async () => { dispose(); await new Promise(resolve => server.close(resolve)) },
   }
 }
@@ -445,5 +465,172 @@ test('Host 连不上 GitHub 时，页面用浏览器网络再查一次（走系�
     assert.match(textOf(tree), /有新版本 v9\.9\.9/)
   } finally {
     globalThis.fetch = original
+  }
+})
+
+test('会话路由：只给「不是当前生效」的账号复制路由，卡片说明怎么用', async () => {
+  const host = await bootWith({
+    shusheng: {
+      displayName: '书生',
+      apiKeyEnv: 'SHUSHENG_API_KEY',
+      api: 'openai-responses',
+      baseURL: 'https://discovery-api.intern-ai.org.cn/v1',
+      models: [{ id: 'Sage-S2.1-Flash', name: 'Sage-S2.1-Flash', contextWindow: 524288 }],
+    },
+  })
+  try {
+    const { exports, react } = await loadBundle(host.origin)
+    const render = mountPage(exports, react)
+    let tree = await paint(render)
+    buttons(tree, '+ 添加提供商')[0].props.onClick()
+    tree = await paint(render)
+    buttons(tree, '添加')[0].props.onClick()
+    await settle()
+    tree = await paint(render)
+
+    // 先把当前密钥收编成账号 —— 它的 key 与基路由相同，所以不该再复制一条。
+    buttons(tree, '存为账号')[0].props.onClick()
+    await settle()
+    tree = await paint(render)
+
+    // 再加一个钥匙不同的账号，它才需要自己的路由。
+    buttons(tree, '+ 添加账号')[0].props.onClick()
+    tree = await render()
+    let inputs = findAll(tree, node => node.type === 'input')
+    inputs[0].props.onChange({ target: { value: '小号' } })
+    tree = await render()
+    inputs = findAll(tree, node => node.type === 'input')
+    inputs[1].props.onChange({ target: { value: 'sk-second-0001' } })
+    tree = await render()
+    findAll(tree, node => node.type === 'form')[0].props.onSubmit({ preventDefault() {} })
+    await settle()
+    tree = await paint(render)
+
+    assert.equal(buttons(tree, '会话路由').length, 1, '能复制的提供商要有开关')
+    buttons(tree, '会话路由')[0].props.onClick()
+    await settle()
+    tree = await paint(render)
+
+    const text = textOf(tree)
+    assert.match(text, /会话路由已开启/)
+    assert.match(text, /共 2 组，全部带尾号/, '模型框里不该再有「不带后缀」那组')
+    assert.match(text, /「书生 · 账号1」就是新对话默认用的那把/)
+    assert.equal(host.providers.shusheng.displayName, '书生 · 账号1', '基路由也要带上尾号')
+    assert.equal(buttons(tree, '会话路由 · 开').length, 1, '开着的状态要看得出来')
+
+    // 只有「小号」这一条影子路由；当前生效那个账号直接用基路由。
+    const shadow = Object.keys(host.providers).filter(id => id.includes('-ks-'))
+    assert.equal(shadow.length, 1, '当前生效的账号不该再复制一条')
+    assert.equal(host.providers[shadow[0]].displayName, '书生 · 小号')
+    assert.equal(host.providers[shadow[0]].apiKeyEnv,
+      'KEYSWITCH_SHUSHENG_' + shadow[0].split('-ks-')[1].toUpperCase())
+
+    // 会话路由开着时全局「切换」禁用，免得把别人选好的那组路由切没了。
+    const swap = buttons(tree, '切换')
+    assert.equal(swap.length, 1)
+    assert.equal(swap[0].props.disabled, true)
+
+    // 关掉：基路由还原成原名，影子路由清空，开关回到初始状态。
+    buttons(tree, '会话路由 · 开')[0].props.onClick()
+    await settle()
+    tree = await paint(render)
+    assert.equal(host.providers.shusheng.displayName, '书生', '关掉后要把显示名还原')
+    assert.equal(Object.keys(host.providers).filter(id => id.includes('-ks-')).length, 0)
+    assert.equal(buttons(tree, '会话路由').length, 1)
+  } finally {
+    await host.close()
+  }
+})
+
+test('窄屏（DSH Go 竖屏 390px）：卡片头分三行、按钮 36px、输入框 16px、底部留安全区', async () => {
+  const host = await bootWith({
+    shusheng: {
+      displayName: '书生',
+      apiKeyEnv: 'SHUSHENG_API_KEY',
+      api: 'openai-responses',
+      baseURL: 'https://discovery-api.intern-ai.org.cn/v1',
+      models: [{ id: 'Sage-S2.1-Flash', name: 'Sage-S2.1-Flash', contextWindow: 524288 }],
+    },
+  })
+  try {
+    const { exports, react } = await loadBundle(host.origin, { innerWidth: 390, screen: { width: 390 } })
+    const render = mountPage(exports, react)
+    let tree = await render()
+    await settle(200)
+    tree = await render()
+
+    // 页面要接管滚动，并给 iPhone 底部横条留位置。
+    const page = findAll(tree, node => node.props?.style?.overscrollBehaviorY === 'contain')[0]
+    assert.ok(page !== undefined, '窄屏页面要标记成独立滚动容器')
+    assert.match(page.props.style.paddingBottom, /safe-area-inset-bottom/)
+
+    // 空状态的主按钮整行铺开。
+    const addProvider = buttons(tree, '+ 添加提供商')[0]
+    assert.equal(addProvider.props.style.minHeight, '40px', '主操作按钮要更高')
+
+    addProvider.props.onClick()
+    tree = await render()
+    buttons(tree, '添加')[0].props.onClick()
+    await settle()
+    tree = await render()
+
+    // 卡片头：窄屏第一个孩子是 div（标题 + 引用那一行），宽屏是 span（标题本身）。
+    const header = findAll(tree, node => node.type === 'header')[0]
+    assert.equal(header.props.children.length, 3)
+    assert.equal(header.props.children[0].type, 'div', '窄屏卡片头要拆行')
+
+    // 卡片头按钮：一行两个，等分，36px 高。
+    assert.equal(buttons(tree, '会话路由')[0].props.style.minHeight, '36px')
+    assert.equal(buttons(tree, '移除')[0].props.style.minHeight, '36px')
+
+    // 账号行变成两列网格，动作按钮另起一行。
+    buttons(tree, '存为账号')[0].props.onClick()
+    await settle()
+    tree = await render()
+    const accountRow = findAll(tree, node => node.type === 'li')[0]
+    assert.equal(accountRow.props.style.display, 'grid')
+
+    // 输入框 16px：iOS 对 <16px 的输入框会在聚焦时放大整页。
+    buttons(tree, '+ 添加账号')[0].props.onClick()
+    tree = await render()
+    const inputs = findAll(tree, node => node.type === 'input')
+    assert.ok(inputs.length >= 2)
+    assert.equal(inputs[0].props.style.fontSize, '16px')
+    assert.equal(inputs[1].props.style.fontSize, '16px')
+  } finally {
+    await host.close()
+  }
+})
+
+test('宽屏保持原样：卡片头还是那一行，账号行还是 flex', async () => {
+  const host = await bootWith({
+    shusheng: {
+      displayName: '书生',
+      apiKeyEnv: 'SHUSHENG_API_KEY',
+      api: 'openai-responses',
+      baseURL: 'https://discovery-api.intern-ai.org.cn/v1',
+      models: [{ id: 'Sage-S2.1-Flash', name: 'Sage-S2.1-Flash', contextWindow: 524288 }],
+    },
+  })
+  try {
+    const { exports, react } = await loadBundle(host.origin)
+    const render = mountPage(exports, react)
+    let tree = await paint(render)
+    buttons(tree, '+ 添加提供商')[0].props.onClick()
+    tree = await paint(render)
+    buttons(tree, '添加')[0].props.onClick()
+    await settle()
+    tree = await paint(render)
+    buttons(tree, '存为账号')[0].props.onClick()
+    await settle()
+    tree = await paint(render)
+
+    const header = findAll(tree, node => node.type === 'header')[0]
+    assert.equal(header.props.children[0].type, 'span', '宽屏不该拆行')
+    const accountRow = findAll(tree, node => node.type === 'li')[0]
+    assert.equal(accountRow.props.style.display, 'flex')
+    assert.equal(buttons(tree, '会话路由')[0].props.style.minHeight, undefined, '宽屏按钮高度不抬')
+  } finally {
+    await host.close()
   }
 })
